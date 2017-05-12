@@ -136,14 +136,14 @@ module.exports = (app)=> {
         console.log(`Cache file too old (${cacheAge / 1000 / 60} minutes), updating cache`);
         updateDataFromJenkins()
           .then((data)=> {
-            res.send(data)
+            res.send(data);
           });
         return true;
       }).catch((e)=> {
         console.log(`Warning: ${e}`);
         updateDataFromJenkins()
           .then((data)=> {
-            res.send(data)
+            res.send(data);
           });
       });
   });

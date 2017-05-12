@@ -7,14 +7,18 @@
     "build": "node ./node_modules/gulp/bin/gulp.js build-prod",
     "build-dev": "node ./node_modules/gulp/bin/gulp.js build-dev",
     "prepublish": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "./node_modules/eslint/bin/eslint.js App.js routes modules src/js gulpfile.js",
+    "test": "npm run build",
+    "lint": "./node_modules/eslint/bin/eslint.js app.js routes modules src/js gulpfile.js",
     "start": "node app.js",
     "lint-install": "npm-install-peers || echo 'Please run `npm install -g npm-install-peers` first'",
     "deploy": "npm install --production"
   },
-  "author": "Jehy",
+  "author": "Jehy <npm@jehy.ru>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jehy/node-jenkins-dashboard"
+  },
   "dependencies": {
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.1",
