@@ -1,0 +1,30 @@
+{
+  "name": "jenkins-dashboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "./node_modules/eslint/bin/eslint.js App.js routes test modules server.js bin",
+    "start": "node bin/start.js",
+    "lint-install": "npm-install-peers || echo 'Please run `npm install -g npm-install-peers` first'",
+    "deploy": "npm install --production"
+  },
+  "author": "Jehy",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "jenkins": "^0.20.0"
+  },
+  "peerDependencies": {
+    "babel-cli": "^6.23.0",
+    "babel-preset-es2015": "^6.22.0",
+    "eslint": "^3.16.1",
+    "eslint-config-airbnb": "^14.1.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "^4.0.0",
+    "eslint-plugin-promise": "^3.4.2",
+    "eslint-plugin-react": "^6.10.0",
+    "eslint-plugin-standard": "^2.0.1"
+  }
+}
