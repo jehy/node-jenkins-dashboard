@@ -1,6 +1,8 @@
 {
   "port": 8000,
-  "maxBuilds": 3,
+  "maxBuilds": 40,
+  "cacheFile": "cache/data.json",
+  "cacheTime": 10,
   "jenkins": {
     "baseUrl": "https://username:password@jenkins.domain.ru",
     "crumbIssuer": true,

@@ -1,0 +1,13 @@
+#dashboard {
+    padding-left: 40px;
+}
+
+#progressBar {
+    display: none;
+    margin-top: 20px;
+}
+
+.preformatted {
+    font-family: monospace;
+    white-space: pre;
+}
