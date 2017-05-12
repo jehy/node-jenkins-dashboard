@@ -46,9 +46,9 @@ function getJobData(job) {
           project = params.project;
         }
         currentState[job.name] = currentState[job.name] || {};
-        currentState[job.name][project] = currentState[job.name][project] || {};
-        if (currentState[job.name][project][team] === undefined || currentState[job.name][project][team].timestamp < buildData.timestamp) {
-          currentState[job.name][project][team] = {
+        currentState[job.name][team] = currentState[job.name][team] || {};
+        if (currentState[job.name][team][project] === undefined || currentState[job.name][team][project].timestamp < buildData.timestamp) {
+          currentState[job.name][team][project] = {
             id: buildData.id,
             url: buildData.url,
             result: buildData.result,
@@ -76,16 +76,18 @@ jenkins.job.list()
     let getLogPromises = [];
     currentState.forEach((jobData)=> {
       Object.keys(jobData).forEach(function (jobName) {
-        const projectData = (jobData[jobName]);
-        Object.keys(projectData).forEach(function (key2) {
-          const teamData = (projectData[key2]);
-          Object.keys(teamData).forEach(function (key3) {
-            const buildData = (teamData[key3]);
+        const teamData = (jobData[jobName]);
+        Object.keys(teamData).forEach(function (key2) {
+          const projectData = (teamData[key2]);
+          Object.keys(projectData).forEach(function (key3) {
+            const buildData = (projectData[key3]);
             let getLogPromise = jenkins.build.log(jobName, buildData.id)
               .then((logData)=> {
                 // buildData.log = logData; //.substr(0,50); // no need for full log
+                let pos = logData.indexOf("\n");
+                buildData.user = logData.substr(0, pos).replace('Started by user', '').trim();
                 let searchString = '== `Branch';
-                let pos = logData.indexOf(searchString);
+                pos = logData.indexOf(searchString);
                 if (pos === -1) {
                   return;
                 }
