@@ -5,7 +5,10 @@
 [![devDependencies Status](https://david-dm.org/jehy/node-jenkins-dashboard/dev-status.svg)](https://david-dm.org/jehy/node-jenkins-dashboard?type=dev)
 
 Shows current state of all projects on all environments and servers based on jenkins logs.
-This code has some customizations which you should edit or remove before usage.
+This code uses some custom jenkins parameters which you should edit or remove before usage
+ (team, project, commit, author, branch).
+
+![Dashboard looks liek this](dashboard.png?raw=true "Title")
 
 ## Installation
 ```bash
@@ -20,6 +23,12 @@ npm install git+ssh://git@github.com:jehy/node-jenkins-dashboard.git
   "maxBuilds": 40,
   "cacheFile": "cache/data.json",
   "cacheTime": 10,
+  "taskFilter":"деплоя приложений",
+  "crawl":
+  {
+    "delayMin":10,
+    "delayMax":5000
+  },
   "jenkins": {
     "baseUrl": "https://username:password@jenkins.domain.ru",
     "crumbIssuer": true,
@@ -32,3 +41,5 @@ npm install git+ssh://git@github.com:jehy/node-jenkins-dashboard.git
 * `maxBuilds` - how many build to index in job history
 * `cacheTime` - cache time for data in minutes
 * `jenkins` - data for connection to jenkins
+* `taskFilter` - show only tasks which contain `taskFilter` string
+* `crawl` - min and max delay for asking jenkins to avoid jenkins overload

@@ -5,9 +5,20 @@ const Jenkins = require('jenkins'),
       config  = require('../config/default.json'),
       jenkins = Jenkins(config.jenkins);
 
+function getRandomIntInclusive(min, max) {
+  const minValue = Math.ceil(min);
+  const maxValue = Math.floor(max);
+  return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
+}
+
+function PromiseRandomDelay()
+{
+  return Promise.delay(getRandomIntInclusive(config.crawl.delayMin, config.crawl.delayMax));
+}
 
 function getJobData(job) {
-  return jenkins.job.get(job.name)
+  return PromiseRandomDelay()
+    .then(()=>jenkins.job.get(job.name))
     .then((jobData)=> {
       const promisesArray = [];
       let minBuild = jobData.lastBuild.number - config.maxBuilds;
@@ -15,7 +26,8 @@ function getJobData(job) {
         minBuild = 1;
       }
       for (let i = jobData.lastBuild.number; i > minBuild; i--) {
-        const getBuildInfo = jenkins.build.get(job.name, i)
+        const getBuildInfo = PromiseRandomDelay()
+          .then(()=>jenkins.build.get(job.name, i))
           .catch((err)=> {
             console.log(`Warning: ${err}`);
           });
@@ -70,10 +82,12 @@ function updateDataFromJenkins() {
   console.log('fetching jobs');
   return jenkins.job.list()
     .then((data)=> {
-      // console.log('info', data);
-      const filteredJobs = data.filter((job)=> {
-        return job.name.indexOf('деплоя приложений') !== -1;
-      });
+      let filteredJobs = data;
+      if (config.taskFilter !== undefined && config.taskFilter.length > 1) {
+        filteredJobs = data.filter((job)=> {
+          return job.name.indexOf(config.taskFilter) !== -1;
+        });
+      }
       const ProcessPromises = filteredJobs.map(getJobData);
       return Promise.all(ProcessPromises);
     })
@@ -83,11 +97,12 @@ function updateDataFromJenkins() {
       currentState.forEach((jobData)=> {
         Object.keys(jobData).forEach((jobName)=> {
           const teamData = (jobData[jobName]);
-          Object.keys(teamData).forEach((key2)=> {
-            const projectData = (teamData[key2]);
-            Object.keys(projectData).forEach((key3)=> {
-              const buildData = (projectData[key3]);
-              const getLogPromise = jenkins.build.log(jobName, buildData.id)
+          Object.keys(teamData).forEach((teamName)=> {
+            const projectData = (teamData[teamName]);
+            Object.keys(projectData).forEach((projectName)=> {
+              const buildData = (projectData[projectName]);
+              const getLogPromise = PromiseRandomDelay()
+                .then(()=>jenkins.build.log(jobName, buildData.id))
                 .then((logData)=> {
                   // buildData.log = logData; //.substr(0,50); // no need for full log
                   let pos = logData.indexOf("\n");

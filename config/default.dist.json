@@ -3,6 +3,12 @@
   "maxBuilds": 40,
   "cacheFile": "cache/data.json",
   "cacheTime": 10,
+  "taskFilter":"деплоя приложений",
+  "crawl":
+  {
+    "delayMin":10,
+    "delayMax":5000
+  },
   "jenkins": {
     "baseUrl": "https://username:password@jenkins.domain.ru",
     "crumbIssuer": true,
