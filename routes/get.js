@@ -3,7 +3,27 @@ const Jenkins = require('jenkins'),
       Promise = require('bluebird'),
       fs      = require('fs-extra'),
       config  = require('../config/default.json'),
-      jenkins = Jenkins(config.jenkins);
+      jenkins = Jenkins(config.jenkins),
+      Gitlab  = require('gitlab'),
+      gitlab  = Gitlab(config.gitlab);
+
+let gitlabProjects = [];
+// Listing projects
+function getGitlabProjects() {
+  return new Promise((resolve, reject)=> {
+      gitlab.projects.all(function (projects) {
+        projects = projects.map(function (project) {
+          return {
+            name: project.name.toLowerCase().replace('pmv3-', '').replace('-app', '').replace('api', ''),
+            url: project.web_url,
+            fullName: project.name_with_namespace.toLowerCase()
+          }
+        });
+        resolve(projects);
+      })
+    }
+  )
+}
 
 function getRandomIntInclusive(min, max) {
   const minValue = Math.ceil(min);
@@ -11,8 +31,7 @@ function getRandomIntInclusive(min, max) {
   return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
 }
 
-function PromiseRandomDelay()
-{
+function PromiseRandomDelay() {
   return Promise.delay(getRandomIntInclusive(config.crawl.delayMin, config.crawl.delayMax));
 }
 
@@ -105,6 +124,21 @@ function updateDataFromJenkins() {
                 .then(()=>jenkins.build.log(jobName, buildData.id))
                 .then((logData)=> {
                   // buildData.log = logData; //.substr(0,50); // no need for full log
+
+                  // get corresponding gitlab project
+                  let thisGitlabProject = null;
+                  gitlabProjects.forEach((project)=> {
+                    if (project.name === projectName && (project.fullName.indexOf('legacy') === -1)) {
+                      thisGitlabProject = project;
+                    }
+                  });
+                  // set corresponding gitlab project urls
+                  if (thisGitlabProject != null) {
+                    buildData.projectUrl = thisGitlabProject.url;
+                    buildData.branchUrl = `${thisGitlabProject.url}/tree/${buildData.branch}`;
+                  }
+
+                  // get user and commit from log
                   let pos = logData.indexOf("\n");
                   buildData.user = logData.substr(0, pos).replace('Started by user', '').trim();
                   const searchString = '== `Branch';
@@ -115,6 +149,10 @@ function updateDataFromJenkins() {
                   const searchString2 = '(at ';
                   pos = logData.indexOf(searchString2, pos);
                   buildData.commit = logData.substr(pos + searchString2.length, 7);
+                  // set commit log
+                  if (thisGitlabProject != null) {
+                    buildData.commit = `<a href="${thisGitlabProject.url}/commits/${buildData.commit}">${buildData.commit}</a>`
+                  }
                 });
               getLogPromises.push(getLogPromise);
             });
@@ -138,8 +176,10 @@ function updateDataFromJenkins() {
 }
 module.exports = (app)=> {
   app.post('/get', (req, res) => {
-
-    return fs.stat(config.cacheFile)
+    console.log('fetching gitlab projects');
+    getGitlabProjects()
+      .then((projects)=>gitlabProjects = projects)
+      .then(()=>fs.stat(config.cacheFile))
       .then((fileDate)=> {
         const cacheAge = (new Date().getTime() - fileDate.mtime.getTime());
         if (cacheAge < config.cacheTime * 1000 * 60) {
@@ -155,12 +195,12 @@ module.exports = (app)=> {
           });
         return true;
       }).catch((e)=> {
-        console.log(`Warning: ${e}`);
-        updateDataFromJenkins()
-          .then((data)=> {
-            res.send(data);
-          });
-      });
+      console.log(`Warning: ${e}`);
+      updateDataFromJenkins()
+        .then((data)=> {
+          res.send(data);
+        });
+    });
   });
 
 };

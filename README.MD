@@ -33,6 +33,10 @@ npm install git+ssh://git@github.com:jehy/node-jenkins-dashboard.git
     "baseUrl": "https://username:password@jenkins.domain.ru",
     "crumbIssuer": true,
     "promisify": true
+  },
+  "gitlab": {
+    "url": "https://gitlab.domain.ru",
+    "token": "yyr8***AAxydd***Gvxu"
   }
 }
 ```
@@ -43,3 +47,4 @@ npm install git+ssh://git@github.com:jehy/node-jenkins-dashboard.git
 * `jenkins` - data for connection to jenkins
 * `taskFilter` - show only tasks which contain `taskFilter` string
 * `crawl` - min and max delay for asking jenkins to avoid jenkins overload
+* `gitlab` - gitlab connection data for fetching links to branches, commits and projects

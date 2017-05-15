@@ -54,12 +54,22 @@ $(function () {
             Object.keys(projectData).forEach(function (projectName) {
               const projectsTableRow = $('<tr></tr>');
               const buildData = (projectData[projectName]);
-              projectsTableRow.append(`<td>${projectName}</td>`);
+              if (buildData.projectUrl !== undefined) {
+                projectsTableRow.append(`<td><a href="${buildData.projectUrl}">${projectName}</a></td>`);
+              }
+              else {
+                projectsTableRow.append(`<td>${projectName}</td>`);
+              }
               projectsTableRow.append(`<td>${buildData.result}</td>`);
               projectsTableRow.append(`<td>${moment(new Date(buildData.timestamp)).format('YYYY.MM.DD HH:mm:ss')}</td>`);
               projectsTableRow.append(`<td><a href="${buildData.url}">${buildData.id}</a></td>`);
-              projectsTableRow.append(`<td>${buildData.user}</td>`);
-              projectsTableRow.append(`<td>${buildData.branch}</td>`);
+              projectsTableRow.append(`<td style="width:400px">${buildData.user}</td>`);
+              if (buildData.branchUrl !== undefined) {
+                projectsTableRow.append(`<td><a href="${buildData.branchUrl}">${buildData.branch}</a></td>`);
+              }
+              else {
+                projectsTableRow.append(`<td>${buildData.branch}</td>`);
+              }
               projectsTableRow.append(`<td>${buildData.commit}</td>`);
               if (buildData.result !== 'SUCCESS') {
                 projectsTableRow.attr('class', 'alert alert-danger');
@@ -79,6 +89,6 @@ $(function () {
       $('#alerts').html(alert);
     })
     .finally(()=> {
-    $('#progressBar').hide();
-  });
+      $('#progressBar').hide();
+    });
 });
