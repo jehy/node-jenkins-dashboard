@@ -176,10 +176,7 @@ function updateDataFromJenkins() {
 }
 module.exports = (app)=> {
   app.post('/get', (req, res) => {
-    console.log('fetching gitlab projects');
-    getGitlabProjects()
-      .then((projects)=>gitlabProjects = projects)
-      .then(()=>fs.stat(config.cacheFile))
+    fs.stat(config.cacheFile)
       .then((fileDate)=> {
         const cacheAge = (new Date().getTime() - fileDate.mtime.getTime());
         if (cacheAge < config.cacheTime * 1000 * 60) {
@@ -189,14 +186,13 @@ module.exports = (app)=> {
             });
         }
         console.log(`Cache file too old (${cacheAge / 1000 / 60} minutes), updating cache`);
-        updateDataFromJenkins()
-          .then((data)=> {
-            res.send(data);
-          });
-        return true;
+        throw new Error('reloading cache');
       }).catch((e)=> {
       console.log(`Warning: ${e}`);
-      updateDataFromJenkins()
+      console.log('fetching gitlab projects');
+      getGitlabProjects()
+        .then((projects)=>gitlabProjects = projects)
+        .then(()=>updateDataFromJenkins())
         .then((data)=> {
           res.send(data);
         });

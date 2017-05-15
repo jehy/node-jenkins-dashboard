@@ -28,12 +28,23 @@ $(function () {
   parent.css('display', 'none');
   requestPromise(options)
     .then((data)=> {
-      if (data.length === 0) {
-        throw new Error('Не пришло данных!');
+      if (!data || !data.length || data.length === 0) {
+        throw new Error(`Не пришло данных!' ${data}`);
       }
       data.forEach((jobData)=> {
         Object.keys(jobData).forEach(function (jobName) {
-          parent.append(`<h2>${jobName}</h2>`);
+
+          let jobDisplayName = jobName;
+          const pos = jobName.indexOf(' на ');
+          if (pos !== -1) {
+            if (jobDisplayName.indexOf('test_') === -1) {
+              jobDisplayName = jobName.substr(pos + 4);
+            }
+            else {
+              jobDisplayName = `test_${jobName.substr(pos + 4)}`;
+            }
+          }
+          parent.append(`<h2>${jobDisplayName}</h2>`);
           const teamData = (jobData[jobName]);
           Object.keys(teamData).forEach(function (teamName) {
             parent.append(`<h3>${teamName}</h3>`);
@@ -83,7 +94,7 @@ $(function () {
       parent.css('display', 'inline-block');
     })
     .catch((err)=> {
-      const alert = $(`<div>${err.toString()}</div>`);
+      const alert = $(`<div>${err.toString()} ${err.stack}</div>`);
       alert.attr('class', 'alert alert-danger');
       alert.attr('role', 'alert');
       $('#alerts').html(alert);
