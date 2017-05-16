@@ -5,24 +5,26 @@ const Jenkins = require('jenkins'),
       config  = require('../config/default.json'),
       jenkins = Jenkins(config.jenkins),
       Gitlab  = require('gitlab'),
-      gitlab  = Gitlab(config.gitlab);
+      gitlab  = Gitlab(config.gitlab),
+      json    = require('json-promise');
+
 
 let gitlabProjects = [];
 // Listing projects
 function getGitlabProjects() {
   return new Promise((resolve, reject)=> {
-      gitlab.projects.all(function (projects) {
-        projects = projects.map(function (project) {
-          return {
-            name: project.name.toLowerCase().replace('pmv3-', '').replace('-app', '').replace('api', ''),
-            url: project.web_url,
-            fullName: project.name_with_namespace.toLowerCase()
-          }
-        });
-        resolve(projects);
-      })
-    }
-  )
+    gitlab.projects.all((projects)=> {
+      projects = projects.map((project)=> {
+        return {
+          name: project.name.toLowerCase().replace('pmv3-', '').replace('-app', '').replace('api', ''),
+          url: project.web_url,
+          id: project.id,
+          fullName: project.name_with_namespace.toLowerCase(),
+        };
+      });
+      resolve(projects);
+    });
+  });
 }
 
 function getRandomIntInclusive(min, max) {
@@ -44,12 +46,22 @@ function getJobData(job) {
       if (minBuild < 1) {
         minBuild = 1;
       }
-      for (let i = jobData.lastBuild.number; i > minBuild; i--) {
-        const getBuildInfo = PromiseRandomDelay()
-          .then(()=>jenkins.build.get(job.name, i))
-          .catch((err)=> {
-            console.log(`Warning: ${err}`);
+      for (let jobId = jobData.lastBuild.number; jobId > minBuild; jobId--) {
+        const cacheFilePath = `${config.cacheDir}/${job.name}_${jobId}.json`;
+        const getBuildInfo = fs.readJson(cacheFilePath)
+          .catch(()=> { // no cache file for job exists
+            console.log(`no cache found for ${cacheFilePath}`);
+            return PromiseRandomDelay()
+              .then(()=>jenkins.build.get(job.name, jobId))
+              .then((fetchedJobData)=> {
+                fs.writeJson(cacheFilePath, fetchedJobData);
+                return fetchedJobData;
+              })
+              .catch((err)=> {
+                console.log(`Warning: ${err}`);
+              });
           });
+
         promisesArray.push(getBuildInfo);
       }
       return Promise.all(promisesArray);
@@ -136,23 +148,53 @@ function updateDataFromJenkins() {
                   if (thisGitlabProject != null) {
                     buildData.projectUrl = thisGitlabProject.url;
                     buildData.branchUrl = `${thisGitlabProject.url}/tree/${buildData.branch}`;
+
                   }
 
-                  // get user and commit from log
+                  // get user from log
                   let pos = logData.indexOf("\n");
                   buildData.user = logData.substr(0, pos).replace('Started by user', '').trim();
+
+                  // get commit from log
                   const searchString = '== `Branch';
                   pos = logData.indexOf(searchString);
                   if (pos === -1) {
-                    return;
+                    return null;
                   }
                   const searchString2 = '(at ';
                   pos = logData.indexOf(searchString2, pos);
                   buildData.commit = logData.substr(pos + searchString2.length, 7);
                   // set commit log
-                  if (thisGitlabProject != null) {
-                    buildData.commit = `<a href="${thisGitlabProject.url}/commits/${buildData.commit}">${buildData.commit}</a>`
+                  if (thisGitlabProject === null) {
+                    return null;
                   }
+                  buildData.commitUrl = `${thisGitlabProject.url}/commits/${buildData.commit}`;
+
+                  // get version info
+                  return new Promise((resolve, reject)=> {
+                    gitlab.projects.repository.showFile({
+                      projectId: thisGitlabProject.id,
+                      ref: buildData.commit,
+                      file_path: 'package.json',
+                    }, (file)=> {
+                      // console.log;
+                      // console.log("=== File ===");
+                      // console.log(file);
+                      if (file) {
+                        resolve((new Buffer(file.content, 'base64')).toString());
+                      }
+                      else reject(new Error(`no could not get package.json file for ${projectName}`));
+                    });
+                  })
+                    .then((content)=> {
+                      return json.parse(content);
+                    })
+                    .then((packageObject)=> {
+                      buildData.version = packageObject.version;
+                    })
+                    .catch((err)=> {
+                      console.log(`Warning: ${err.toString()}`);
+                    });
                 });
               getLogPromises.push(getLogPromise);
             });
@@ -165,7 +207,8 @@ function updateDataFromJenkins() {
     })
     .then((currentState)=> {
       console.log('finished');
-      fs.writeJson(config.cacheFile, currentState);
+      const cacheFile=`${config.cacheDir}/data.json`;
+      fs.writeJson(cacheFile, currentState);
       return (currentState);
       // console.log(JSON.stringify(currentState, null, 3));
     })
@@ -175,12 +218,13 @@ function updateDataFromJenkins() {
     });
 }
 module.exports = (app)=> {
+  const cacheFile=`${config.cacheDir}/data.json`;
   app.post('/get', (req, res) => {
-    fs.stat(config.cacheFile)
+    fs.stat(cacheFile)
       .then((fileDate)=> {
         const cacheAge = (new Date().getTime() - fileDate.mtime.getTime());
         if (cacheAge < config.cacheTime * 1000 * 60) {
-          return fs.readJson(config.cacheFile)
+          return fs.readJson(cacheFile)
             .then((cacheObject)=> {
               res.send(cacheObject);
             });
@@ -191,7 +235,10 @@ module.exports = (app)=> {
       console.log(`Warning: ${e}`);
       console.log('fetching gitlab projects');
       getGitlabProjects()
-        .then((projects)=>gitlabProjects = projects)
+        .then((projects)=> {
+          gitlabProjects = projects;
+          return null;
+        })
         .then(()=>updateDataFromJenkins())
         .then((data)=> {
           res.send(data);

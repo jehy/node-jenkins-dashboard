@@ -25,7 +25,7 @@ npm install git+ssh://git@github.com:jehy/node-jenkins-dashboard.git
 {
   "port": 8000,
   "maxBuilds": 40,
-  "cacheFile": "cache/data.json",
+  "cacheDir": "cache",
   "cacheTime": 10,
   "taskFilter":"деплоя приложений",
   "crawl":

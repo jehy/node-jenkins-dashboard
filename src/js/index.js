@@ -32,7 +32,7 @@ $(function () {
         throw new Error(`Не пришло данных!' ${data}`);
       }
       data.forEach((jobData)=> {
-        Object.keys(jobData).forEach(function (jobName) {
+        Object.keys(jobData).forEach((jobName)=> {
 
           let jobDisplayName = jobName;
           const pos = jobName.indexOf(' на ');
@@ -44,10 +44,19 @@ $(function () {
               jobDisplayName = `test_${jobName.substr(pos + 4)}`;
             }
           }
-          parent.append(`<h2>${jobDisplayName}</h2>`);
-          const teamData = (jobData[jobName]);
-          Object.keys(teamData).forEach(function (teamName) {
-            parent.append(`<h3>${teamName}</h3>`);
+          const jobPanel = {
+            panelHeader: $(`<div class="panel-heading"><h2 class="panel-title">${jobDisplayName}</h2></div>`),
+            panelBody: $('<div class="panel-body">'),
+            parent: $('<div class="panel panel-primary">'),
+          };
+          const teamData = jobData[jobName];
+          Object.keys(teamData).forEach((teamName)=> {
+
+            const teamPanel = {
+              panelHeader: $(`<div class="panel-heading"><h3 class="panel-title">${teamName}</h3></div>`),
+              panelBody: $('<div class="panel-body">'),
+              parent: $('<div class="panel panel-success">'),
+            };
             const projectsTable = $('<table></table>');
             const projectsTableBody = $('<tbody></tbody>');
             projectsTable.append(projectsTableBody);
@@ -60,9 +69,10 @@ $(function () {
             projectsTableTitle.append('<td>Автор</td>');
             projectsTableTitle.append('<td>Ветка</td>');
             projectsTableTitle.append('<td>Коммит</td>');
+            projectsTableTitle.append('<td>Версия</td>');
             projectsTable.append($('<thead></thead>').append(projectsTableTitle));
             const projectData = (teamData[teamName]);
-            Object.keys(projectData).forEach(function (projectName) {
+            Object.keys(projectData).forEach((projectName)=> {
               const projectsTableRow = $('<tr></tr>');
               const buildData = (projectData[projectName]);
               if (buildData.projectUrl !== undefined) {
@@ -75,19 +85,37 @@ $(function () {
               projectsTableRow.append(`<td>${moment(new Date(buildData.timestamp)).format('YYYY.MM.DD HH:mm:ss')}</td>`);
               projectsTableRow.append(`<td><a href="${buildData.url}">${buildData.id}</a></td>`);
               projectsTableRow.append(`<td style="width:400px">${buildData.user}</td>`);
+              if (buildData.commit === undefined) {
+                buildData.commit = '?';
+              }
+              if (buildData.version === undefined) {
+                buildData.version = '?';
+              }
               if (buildData.branchUrl !== undefined) {
                 projectsTableRow.append(`<td><a href="${buildData.branchUrl}">${buildData.branch}</a></td>`);
               }
               else {
                 projectsTableRow.append(`<td>${buildData.branch}</td>`);
               }
-              projectsTableRow.append(`<td>${buildData.commit}</td>`);
+              if (buildData.commit === '?' || buildData.commitUrl === undefined) {
+                projectsTableRow.append(`<td>${buildData.commit}</td>`);
+              }
+              else {
+                projectsTableRow.append(`<td><a href="${buildData.commitUrl}">${buildData.commit}</a></td>`);
+              }
+              projectsTableRow.append(`<td>${buildData.version}</td>`);
               if (buildData.result !== 'SUCCESS') {
                 projectsTableRow.attr('class', 'alert alert-danger');
               }
               projectsTableBody.append(projectsTableRow);
             });
-            parent.append(projectsTable);
+            teamPanel.panelBody.append(projectsTable);
+            teamPanel.parent.append(teamPanel.panelHeader);
+            teamPanel.parent.append(teamPanel.panelBody);
+            jobPanel.panelBody.append(teamPanel.parent);
+            jobPanel.parent.append(jobPanel.panelHeader);
+            jobPanel.parent.append(jobPanel.panelBody);
+            parent.append(jobPanel.parent);
           });
         });
       });

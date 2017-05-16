@@ -19,9 +19,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static('public'));
 app.use(sendResult);
 app.firstLaunch = true;
-for (let i = 0; i < Routes.length; i++) {
-  Routes[i](app);
-}
+Routes.forEach(route=>route(app));
 
 app.listen(config.port);
 console.log('Express is up on port %d in %s mode', config.port, app.settings.env);
