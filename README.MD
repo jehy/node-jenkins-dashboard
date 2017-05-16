@@ -5,10 +5,14 @@
 [![devDependencies Status](https://david-dm.org/jehy/node-jenkins-dashboard/dev-status.svg)](https://david-dm.org/jehy/node-jenkins-dashboard?type=dev)
 
 Shows current state of all projects on all environments and servers based on jenkins logs.
-This code uses some custom jenkins parameters which you should edit or remove before usage
- (team, project, commit, author, branch).
 
-![Dashboard looks liek this](dashboard.png?raw=true "Title")
+It also provides links to projects, branches and commits from gitlab (in case gitlab project
+ names are equal to jenkins project names).
+ 
+This code uses some custom jenkins parameters which you should edit or remove before usage
+ (team, project, commit, author, branch, some formatting).
+
+![Dashboard looks liek this](dashboard.png?raw=true "Dashboard")
 
 ## Installation
 ```bash
