@@ -132,8 +132,19 @@ function updateDataFromJenkins() {
             const projectData = (teamData[teamName]);
             Object.keys(projectData).forEach((projectName)=> {
               const buildData = (projectData[projectName]);
-              const getLogPromise = PromiseRandomDelay()
-                .then(()=>jenkins.build.log(jobName, buildData.id))
+              const cacheFilePath = `${config.cacheDir}/${jobName}_${buildData.id}_log.json`;
+              const getLogPromise = fs.readFile(cacheFilePath,'utf8')
+                .catch(()=> { // no cache file for job exists
+                  console.log(`no cache found for ${cacheFilePath}`);
+                  return PromiseRandomDelay()
+                    .then(()=> {
+                      return jenkins.build.log(jobName, buildData.id);
+                    })
+                    .then((logData)=> {
+                      fs.writeFile(cacheFilePath, logData);
+                      return logData;
+                    });
+                })
                 .then((logData)=> {
                   // buildData.log = logData; //.substr(0,50); // no need for full log
 
@@ -150,7 +161,6 @@ function updateDataFromJenkins() {
                     buildData.branchUrl = `${thisGitlabProject.url}/tree/${buildData.branch}`;
 
                   }
-
                   // get user from log
                   let pos = logData.indexOf("\n");
                   buildData.user = logData.substr(0, pos).replace('Started by user', '').trim();
@@ -207,7 +217,7 @@ function updateDataFromJenkins() {
     })
     .then((currentState)=> {
       console.log('finished');
-      const cacheFile=`${config.cacheDir}/data.json`;
+      const cacheFile = `${config.cacheDir}/data.json`;
       fs.writeJson(cacheFile, currentState);
       return (currentState);
       // console.log(JSON.stringify(currentState, null, 3));
@@ -218,7 +228,7 @@ function updateDataFromJenkins() {
     });
 }
 module.exports = (app)=> {
-  const cacheFile=`${config.cacheDir}/data.json`;
+  const cacheFile = `${config.cacheDir}/data.json`;
   app.post('/get', (req, res) => {
     fs.stat(cacheFile)
       .then((fileDate)=> {
@@ -226,6 +236,7 @@ module.exports = (app)=> {
         if (cacheAge < config.cacheTime * 1000 * 60) {
           return fs.readJson(cacheFile)
             .then((cacheObject)=> {
+              console.log('Loading data from cache');
               res.send(cacheObject);
             });
         }

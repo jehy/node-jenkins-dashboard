@@ -3,12 +3,11 @@
 
 const $              = require('jquery'),
       moment         = require('moment'),
-      config         = require('../../config/default.json'),
       requestPromise = require('request-promise');
 
 window.$ = $;
 window.jQuery = $;
-require('bootstrap');
+// require('bootstrap');
 
 $(function () {
 
@@ -20,7 +19,7 @@ $(function () {
   // console.log(`Sending data: ${JSON.stringify(requestData)}`);
   const options = {
     method: 'POST',
-    uri: `${location.protocol}//${window.location.hostname}:${config.port}/get/`,
+    uri: `${location.protocol}//${window.location.hostname}${(window.location.port ? ':' + window.location.port : '')}/get/`,
     json: true,
     headers: {},
   };
