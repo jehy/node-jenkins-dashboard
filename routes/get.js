@@ -133,7 +133,7 @@ function updateDataFromJenkins() {
             Object.keys(projectData).forEach((projectName)=> {
               const buildData = (projectData[projectName]);
               const cacheFilePath = `${config.cacheDir}/${jobName}_${buildData.id}_log.json`;
-              const getLogPromise = fs.readFile(cacheFilePath,'utf8')
+              const getLogPromise = fs.readFile(cacheFilePath, 'utf8')
                 .catch(()=> { // no cache file for job exists
                   console.log(`no cache found for ${cacheFilePath}`);
                   return PromiseRandomDelay()
@@ -155,6 +155,22 @@ function updateDataFromJenkins() {
                       thisGitlabProject = project;
                     }
                   });
+
+                  // get gitlab project data from log
+
+                  if (thisGitlabProject == null) {
+                    const gitlabData = logData.match(new RegExp('--heads git(.*?):(.*?)/(.*?).git'));
+                    console.log(`gitlabData: ${gitlabData}`);
+                    if (gitlabData !== null) {
+                      gitlabProjects.forEach((project)=> {
+                        console.log(`${project.name} vs ${gitlabData[3]}`);
+                        if (project.name === gitlabData[3] && (project.fullName.indexOf('legacy') === -1)) {
+                          thisGitlabProject = project;
+                          console.log('\n\nproject found\n\n');
+                        }
+                      });
+                    }
+                  }
                   // set corresponding gitlab project urls
                   if (thisGitlabProject != null) {
                     buildData.projectUrl = thisGitlabProject.url;
@@ -162,7 +178,7 @@ function updateDataFromJenkins() {
 
                   }
                   // get user from log
-                  let pos = logData.indexOf("\n");
+                  let pos = logData.indexOf('\n');
                   buildData.user = logData.substr(0, pos).replace('Started by user', '').trim();
 
                   // get commit from log

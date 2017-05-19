@@ -1,5 +1,9 @@
 /* eslint-disable func-names*/
+/* eslint-disable prefer-arrow-callback*/
 /* that's because JQuery does not work with ES6*/
+
+/* global window */
+/* global location */
 
 const $              = require('jquery'),
       moment         = require('moment'),
@@ -19,7 +23,7 @@ $(function () {
   // console.log(`Sending data: ${JSON.stringify(requestData)}`);
   const options = {
     method: 'POST',
-    uri: `${location.protocol}//${window.location.hostname}${(window.location.port ? ':' + window.location.port : '')}/get/`,
+    uri: `${location.protocol}//${window.location.hostname}${(window.location.port ? `:${window.location.port}` : '')}/get/`,
     json: true,
     headers: {},
   };
@@ -71,7 +75,8 @@ $(function () {
             projectsTableTitle.append('<td>Версия</td>');
             projectsTable.append($('<thead></thead>').append(projectsTableTitle));
             const projectData = (teamData[teamName]);
-            Object.keys(projectData).forEach((projectName)=> {
+            const keysSorted = Object.keys(projectData).sort();
+            keysSorted.forEach((projectName)=> {
               const projectsTableRow = $('<tr></tr>');
               const buildData = (projectData[projectName]);
               if (buildData.projectUrl !== undefined) {
