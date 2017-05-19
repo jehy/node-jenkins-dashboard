@@ -111,6 +111,7 @@ function getJobData(job) {
 
 function updateDataFromJenkins() {
   console.log('fetching jobs');
+  const jenkinsProject2gitlabProject = [];
   return jenkins.job.list()
     .then((data)=> {
       let filteredJobs = data;
@@ -122,10 +123,10 @@ function updateDataFromJenkins() {
       const ProcessPromises = filteredJobs.map(getJobData);
       return Promise.all(ProcessPromises);
     })
-    .then((currentState)=> {
+    .then((projectInfo1)=> {
       console.log('fetching logs for last builds');
       const getLogPromises = [];
-      currentState.forEach((jobData)=> {
+      projectInfo1.forEach((jobData)=> {
         Object.keys(jobData).forEach((jobName)=> {
           const teamData = (jobData[jobName]);
           Object.keys(teamData).forEach((teamName)=> {
@@ -160,22 +161,19 @@ function updateDataFromJenkins() {
 
                   if (thisGitlabProject == null) {
                     const gitlabData = logData.match(new RegExp('--heads git(.*?):(.*?)/(.*?).git'));
-                    console.log(`gitlabData: ${gitlabData}`);
+                    // console.log(`gitlabData: ${gitlabData}`);
                     if (gitlabData !== null) {
                       gitlabProjects.forEach((project)=> {
-                        console.log(`${project.name} vs ${gitlabData[3]}`);
+                        // console.log(`${project.name} vs ${gitlabData[3]}`);
                         if (project.name === gitlabData[3] && (project.fullName.indexOf('legacy') === -1)) {
                           thisGitlabProject = project;
-                          console.log('\n\nproject found\n\n');
+                          // console.log('\n\nproject found\n\n');
                         }
                       });
                     }
                   }
-                  // set corresponding gitlab project urls
                   if (thisGitlabProject != null) {
-                    buildData.projectUrl = thisGitlabProject.url;
-                    buildData.branchUrl = `${thisGitlabProject.url}/tree/${buildData.branch}`;
-
+                    jenkinsProject2gitlabProject[projectName] = thisGitlabProject;
                   }
                   // get user from log
                   let pos = logData.indexOf('\n');
@@ -190,13 +188,43 @@ function updateDataFromJenkins() {
                   const searchString2 = '(at ';
                   pos = logData.indexOf(searchString2, pos);
                   buildData.commit = logData.substr(pos + searchString2.length, 7);
-                  // set commit log
-                  if (thisGitlabProject === null) {
-                    return null;
-                  }
-                  buildData.commitUrl = `${thisGitlabProject.url}/commits/${buildData.commit}`;
+                  return null;
+                });
+              getLogPromises.push(getLogPromise);
+            });
+          });
+        });
+      });
+      return Promise.all(getLogPromises)
+        .then(()=> {
+          return projectInfo1;
+        });
+    })
+    .then((projectInfo2)=> {
+      const getVersionPromises = [];
+      projectInfo2.forEach((jobData)=> {
+        Object.keys(jobData).forEach((jobName)=> {
+          const teamData = (jobData[jobName]);
+          Object.keys(teamData).forEach((teamName)=> {
+            const projectData = (teamData[teamName]);
+            Object.keys(projectData).forEach((projectName)=> {
+              const thisGitlabProject = jenkinsProject2gitlabProject[projectName];
+              const buildData = (projectData[projectName]);
 
-                  // get version info
+              // set corresponding gitlab project urls
+              if (thisGitlabProject == null || !buildData.branch || !buildData.commit) {
+                return;
+              }
+              buildData.projectUrl = thisGitlabProject.url;
+              buildData.branchUrl = `${thisGitlabProject.url}/tree/${buildData.branch}`;
+
+
+              buildData.commitUrl = `${thisGitlabProject.url}/commits/${buildData.commit}`;
+
+              // get version info
+              const getVersionPromise = PromiseRandomDelay()
+                // .timeout(5000)
+                .then(()=> {
                   return new Promise((resolve, reject)=> {
                     gitlab.projects.repository.showFile({
                       projectId: thisGitlabProject.id,
@@ -209,33 +237,34 @@ function updateDataFromJenkins() {
                       if (file) {
                         resolve((new Buffer(file.content, 'base64')).toString());
                       }
-                      else reject(new Error(`no could not get package.json file for ${projectName}`));
+                      else reject(new Error(`could not get package.json file for ${projectName}`));
                     });
-                  })
-                    .then((content)=> {
-                      return json.parse(content);
-                    })
-                    .then((packageObject)=> {
-                      buildData.version = packageObject.version;
-                    })
-                    .catch((err)=> {
-                      console.log(`Warning: ${err.toString()}`);
-                    });
+                  });
+                })
+                .then((content)=> {
+                  return json.parse(content);
+                })
+                .then((packageObject)=> {
+                  buildData.version = packageObject.version;
+                })
+                .catch((err)=> {
+                  console.log(`Warning: ${err.toString()}`);
                 });
-              getLogPromises.push(getLogPromise);
+              getVersionPromises.push(getVersionPromise);
             });
           });
         });
       });
-      return Promise.all(getLogPromises).then(()=> {
-        return currentState;
-      });
+      return Promise.all(getVersionPromises)
+        .then(()=> {
+          return projectInfo2;
+        });
     })
-    .then((currentState)=> {
+    .then((projectInfo3)=> {
       console.log('finished');
       const cacheFile = `${config.cacheDir}/data.json`;
-      fs.writeJson(cacheFile, currentState);
-      return (currentState);
+      fs.writeJson(cacheFile, projectInfo3);
+      return (projectInfo3);
       // console.log(JSON.stringify(currentState, null, 3));
     })
     .catch((err)=> {
